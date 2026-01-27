@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useSession } from '../lib/useSession';
@@ -164,11 +163,9 @@ function BroadcastPredictionSlot({
 
 function BroadcastParticipantCard({
   participant,
-  revealedSlots,
   side,
 }: {
   participant: Participant;
-  revealedSlots: Set<string>;
   side: 'left' | 'right';
 }) {
   const roleIcon = {
@@ -236,7 +233,7 @@ function BroadcastParticipantCard({
               {Array.from({ length: participant.slotCount }).map((_, index) => {
                 const prediction = participant.predictions[index];
                 const slotId = prediction?.id || `empty-${participant.id}-${index}`;
-                const isRevealed = prediction ? revealedSlots.has(slotId) || prediction.revealed : false;
+                const isRevealed = prediction ? prediction.revealed : false;
 
                 return (
                   <BroadcastPredictionSlot
@@ -258,8 +255,7 @@ function BroadcastParticipantCard({
                   slotNumber={0}
                   revealed={
                     participant.ownTeamPrediction
-                      ? revealedSlots.has(participant.ownTeamPrediction.id) ||
-                        participant.ownTeamPrediction.revealed
+                      ? participant.ownTeamPrediction.revealed
                       : false
                   }
                   animationDelay={participant.slotCount * 0.1}
@@ -275,9 +271,6 @@ function BroadcastParticipantCard({
 
 export function BroadcastView() {
   const { state, stateLoading } = useSession();
-  const [revealedSlots] = useState<Set<string>>(new Set());
-
-  // Real-time updates are handled by SSE in useSession - no polling needed
 
   if (stateLoading || !state) {
     return (
@@ -339,19 +332,16 @@ export function BroadcastView() {
               <BroadcastParticipantCard
                 key={state.participants[0].id}
                 participant={state.participants[0]}
-                revealedSlots={revealedSlots}
                 side="left"
               />
               <BroadcastParticipantCard
                 key={state.participants[2].id}
                 participant={state.participants[2]}
-                revealedSlots={revealedSlots}
                 side="left"
               />
               <BroadcastParticipantCard
                 key={state.participants[1].id}
                 participant={state.participants[1]}
-                revealedSlots={revealedSlots}
                 side="right"
               />
             </>
@@ -360,7 +350,6 @@ export function BroadcastView() {
               <BroadcastParticipantCard
                 key={participant.id}
                 participant={participant}
-                revealedSlots={revealedSlots}
                 side={index === 0 ? 'left' : 'right'}
               />
             ))

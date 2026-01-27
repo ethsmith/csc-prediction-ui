@@ -9,7 +9,7 @@ interface ParticipantCardProps {
   showControls?: boolean;
   onRemovePrediction?: (predictionId: string) => void;
   onRemoveOwnTeamPrediction?: () => void;
-  revealedSlots?: Set<string>;
+  onToggleReveal?: (participantId: string, predictionId: string, isOwnTeam: boolean) => void;
 }
 
 export function ParticipantCard({
@@ -18,7 +18,7 @@ export function ParticipantCard({
   showControls = false,
   onRemovePrediction,
   onRemoveOwnTeamPrediction,
-  revealedSlots = new Set(),
+  onToggleReveal,
 }: ParticipantCardProps) {
   const roleIcon = {
     host: <Mic size={18} />,
@@ -64,7 +64,7 @@ export function ParticipantCard({
           {Array.from({ length: participant.slotCount }).map((_, index) => {
             const prediction = participant.predictions[index];
             const slotId = prediction?.id || `empty-${index}`;
-            const isRevealed = prediction ? (revealedSlots.has(slotId) || prediction.revealed) : false;
+            const isRevealed = prediction ? prediction.revealed : false;
             
             return (
               <PredictionSlot
@@ -79,6 +79,11 @@ export function ParticipantCard({
                     ? () => onRemovePrediction(prediction.id)
                     : undefined
                 }
+                onToggleReveal={
+                  showControls && prediction && onToggleReveal
+                    ? () => onToggleReveal(participant.id, prediction.id, false)
+                    : undefined
+                }
               />
             );
           })}
@@ -89,14 +94,18 @@ export function ParticipantCard({
             slotNumber={0}
             revealed={
               participant.ownTeamPrediction
-                ? revealedSlots.has(participant.ownTeamPrediction.id) ||
-                  participant.ownTeamPrediction.revealed
+                ? participant.ownTeamPrediction.revealed
                 : false
             }
             showControls={showControls}
             onRemove={
               showControls && participant.ownTeamPrediction && onRemoveOwnTeamPrediction
                 ? onRemoveOwnTeamPrediction
+                : undefined
+            }
+            onToggleReveal={
+              showControls && participant.ownTeamPrediction && onToggleReveal
+                ? () => onToggleReveal(participant.id, participant.ownTeamPrediction!.id, true)
                 : undefined
             }
           />

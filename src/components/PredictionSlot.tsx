@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Prediction, OwnTeamPrediction } from '../lib/store';
-import { TrendingUp, TrendingDown, Target, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, X, Eye, EyeOff } from 'lucide-react';
 
 interface PredictionSlotProps {
   prediction?: Prediction | OwnTeamPrediction;
@@ -9,6 +9,7 @@ interface PredictionSlotProps {
   revealed: boolean;
   onRemove?: () => void;
   showControls?: boolean;
+  onToggleReveal?: () => void;
 }
 
 function isPrediction(p: Prediction | OwnTeamPrediction): p is Prediction {
@@ -22,6 +23,7 @@ export function PredictionSlot({
   revealed,
   onRemove,
   showControls = false,
+  onToggleReveal,
 }: PredictionSlotProps) {
   const isEmpty = !prediction;
 
@@ -59,8 +61,22 @@ export function PredictionSlot({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-csc-blue to-csc-dark p-3"
+            className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-csc-blue to-csc-dark p-3 group ${showControls && onToggleReveal ? 'cursor-pointer' : ''}`}
+            onClick={showControls && onToggleReveal ? onToggleReveal : undefined}
           >
+            {showControls && onToggleReveal && (
+              <div className="absolute top-2 right-2 p-1.5 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Eye size={14} className="text-white/80" />
+              </div>
+            )}
+            {showControls && onRemove && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                className="absolute top-2 left-2 p-1 rounded-full bg-csc-red/20 hover:bg-csc-red/40 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <X size={14} />
+              </button>
+            )}
             <motion.div
               animate={{ 
                 scale: [1, 1.05, 1],
@@ -94,12 +110,18 @@ export function PredictionSlot({
             animate={{ rotateY: 0, opacity: 1 }}
             exit={{ rotateY: -90, opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="absolute inset-0 p-4 flex flex-col"
+            className={`absolute inset-0 p-4 flex flex-col group ${showControls && onToggleReveal ? 'cursor-pointer' : ''}`}
+            onClick={showControls && onToggleReveal ? onToggleReveal : undefined}
           >
+            {showControls && onToggleReveal && (
+              <div className="absolute top-2 right-2 p-1.5 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <EyeOff size={14} className="text-white/80" />
+              </div>
+            )}
             {showControls && onRemove && (
               <button
-                onClick={onRemove}
-                className="absolute top-2 right-2 p-1 rounded-full bg-csc-red/20 hover:bg-csc-red/40 transition-colors"
+                onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                className="absolute top-2 left-2 p-1 rounded-full bg-csc-red/20 hover:bg-csc-red/40 transition-colors opacity-0 group-hover:opacity-100"
               >
                 <X size={14} />
               </button>

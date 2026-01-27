@@ -23,13 +23,16 @@ export function HostPanel() {
     setOwnTeamPrediction: apiSetOwnTeamPrediction,
     deleteOwnTeamPrediction,
     clearPredictions,
+    togglePredictionReveal,
+    toggleOwnTeamReveal,
+    revealAllPredictions,
+    hideAllPredictions,
   } = useSession();
 
   const [showSettings, setShowSettings] = useState(false);
   const [showTeamSelector, setShowTeamSelector] = useState(false);
   const [showOwnTeamSelector, setShowOwnTeamSelector] = useState(false);
   const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
-  const [revealedSlots, setRevealedSlots] = useState<Set<string>>(new Set());
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['teams'],
@@ -89,34 +92,36 @@ export function HostPanel() {
     setActiveParticipantId(null);
   };
 
-  const handleRevealAll = () => {
+  const handleRevealNext = async () => {
     if (!state) return;
-    const allSlotIds = new Set<string>();
-    state.participants.forEach(p => {
-      p.predictions.forEach(pred => allSlotIds.add(pred.id));
-      if (p.ownTeamPrediction) allSlotIds.add(p.ownTeamPrediction.id);
-    });
-    setRevealedSlots(allSlotIds);
+    for (const participant of state.participants) {
+      for (const pred of participant.predictions) {
+        if (!pred.revealed) {
+          await togglePredictionReveal(participant.id, pred.id, true);
+          return;
+        }
+      }
+    }
+    for (const participant of state.participants) {
+      if (participant.ownTeamPrediction && !participant.ownTeamPrediction.revealed) {
+        await toggleOwnTeamReveal(participant.id, true);
+        return;
+      }
+    }
   };
 
-  const handleHideAll = () => {
-    setRevealedSlots(new Set());
-  };
-
-  const handleRevealNext = () => {
+  const handleToggleReveal = (participantId: string, predictionId: string, isOwnTeam: boolean) => {
     if (!state) return;
-    const regularSlots: string[] = [];
-    const ownTeamSlots: string[] = [];
-    
-    state.participants.forEach(p => {
-      p.predictions.forEach(pred => regularSlots.push(pred.id));
-      if (p.ownTeamPrediction) ownTeamSlots.push(p.ownTeamPrediction.id);
-    });
+    const participant = state.participants.find(p => p.id === participantId);
+    if (!participant) return;
 
-    const allSlots = [...regularSlots, ...ownTeamSlots];
-    const nextUnrevealed = allSlots.find(id => !revealedSlots.has(id));
-    if (nextUnrevealed) {
-      setRevealedSlots(prev => new Set([...prev, nextUnrevealed]));
+    if (isOwnTeam && participant.ownTeamPrediction) {
+      toggleOwnTeamReveal(participantId, !participant.ownTeamPrediction.revealed);
+    } else {
+      const prediction = participant.predictions.find(p => p.id === predictionId);
+      if (prediction) {
+        togglePredictionReveal(participantId, predictionId, !prediction.revealed);
+      }
     }
   };
 
@@ -208,11 +213,11 @@ export function HostPanel() {
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-4">Actions</h3>
                     <div className="flex flex-wrap gap-3">
-                      <Button variant="secondary" onClick={handleRevealAll} className="flex items-center gap-2">
+                      <Button variant="secondary" onClick={revealAllPredictions} className="flex items-center gap-2">
                         <Eye size={16} />
                         Reveal All
                       </Button>
-                      <Button variant="ghost" onClick={handleHideAll} className="flex items-center gap-2">
+                      <Button variant="ghost" onClick={hideAllPredictions} className="flex items-center gap-2">
                         <RotateCcw size={16} />
                         Hide All
                       </Button>
@@ -298,13 +303,13 @@ export function HostPanel() {
                 participant={participant}
                 isCurrentTurn={state.currentTurn === participant.id}
                 showControls={true}
-                revealedSlots={revealedSlots}
                 onRemovePrediction={predId =>
                   apiRemovePrediction(participant.id, predId)
                 }
                 onRemoveOwnTeamPrediction={() =>
                   deleteOwnTeamPrediction(participant.id)
                 }
+                onToggleReveal={handleToggleReveal}
               />
               <div className="flex gap-3 mt-4 ml-6">
                 {participant.predictions.length < participant.slotCount && (

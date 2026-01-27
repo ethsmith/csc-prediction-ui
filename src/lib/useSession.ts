@@ -15,6 +15,10 @@ export interface SessionContextType {
   deleteOwnTeamPrediction: (participantId: string) => Promise<void>;
   clearPredictions: () => Promise<void>;
   refetchState: () => void;
+  togglePredictionReveal: (participantId: string, predictionId: string, revealed: boolean) => Promise<void>;
+  toggleOwnTeamReveal: (participantId: string, revealed: boolean) => Promise<void>;
+  revealAllPredictions: () => Promise<void>;
+  hideAllPredictions: () => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextType | null>(null);
@@ -164,6 +168,68 @@ export function useSessionProvider(): SessionContextType {
     onError: (err: Error) => setError(err.message),
   });
 
+  // Toggle prediction reveal mutation
+  const togglePredictionRevealMutation = useMutation({
+    mutationFn: ({ participantId, predictionId, revealed }: { participantId: string; predictionId: string; revealed: boolean }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.updatePrediction(sessionId, participantId, predictionId, { revealed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Toggle own team reveal mutation
+  const toggleOwnTeamRevealMutation = useMutation({
+    mutationFn: ({ participantId, revealed }: { participantId: string; revealed: boolean }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.updateOwnTeamPrediction(sessionId, participantId, { revealed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Reveal all predictions
+  const revealAllPredictions = useCallback(async () => {
+    if (!sessionId || !state) return;
+    const promises: Promise<unknown>[] = [];
+    for (const participant of state.participants) {
+      for (const pred of participant.predictions) {
+        if (!pred.revealed) {
+          promises.push(api.updatePrediction(sessionId, participant.id, pred.id, { revealed: true }));
+        }
+      }
+      if (participant.ownTeamPrediction && !participant.ownTeamPrediction.revealed) {
+        promises.push(api.updateOwnTeamPrediction(sessionId, participant.id, { revealed: true }));
+      }
+    }
+    await Promise.all(promises);
+    queryClient.invalidateQueries({ queryKey: ['session'] });
+  }, [sessionId, state, queryClient]);
+
+  // Hide all predictions
+  const hideAllPredictions = useCallback(async () => {
+    if (!sessionId || !state) return;
+    const promises: Promise<unknown>[] = [];
+    for (const participant of state.participants) {
+      for (const pred of participant.predictions) {
+        if (pred.revealed) {
+          promises.push(api.updatePrediction(sessionId, participant.id, pred.id, { revealed: false }));
+        }
+      }
+      if (participant.ownTeamPrediction && participant.ownTeamPrediction.revealed) {
+        promises.push(api.updateOwnTeamPrediction(sessionId, participant.id, { revealed: false }));
+      }
+    }
+    await Promise.all(promises);
+    queryClient.invalidateQueries({ queryKey: ['session'] });
+  }, [sessionId, state, queryClient]);
+
   return {
     state,
     stateLoading,
@@ -176,6 +242,10 @@ export function useSessionProvider(): SessionContextType {
     deleteOwnTeamPrediction: useCallback((participantId) => deleteOwnTeamPredictionMutation.mutateAsync(participantId), [deleteOwnTeamPredictionMutation]),
     clearPredictions: useCallback(() => clearPredictionsMutation.mutateAsync().then(() => {}), [clearPredictionsMutation]),
     refetchState: useCallback(() => refetchState(), [refetchState]),
+    togglePredictionReveal: useCallback((participantId, predictionId, revealed) => togglePredictionRevealMutation.mutateAsync({ participantId, predictionId, revealed }).then(() => {}), [togglePredictionRevealMutation]),
+    toggleOwnTeamReveal: useCallback((participantId, revealed) => toggleOwnTeamRevealMutation.mutateAsync({ participantId, revealed }).then(() => {}), [toggleOwnTeamRevealMutation]),
+    revealAllPredictions,
+    hideAllPredictions,
   };
 }
 
