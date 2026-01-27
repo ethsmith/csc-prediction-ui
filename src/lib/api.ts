@@ -82,7 +82,7 @@ export async function patchGameState(sessionId: string, patch: Partial<GameState
 // Settings
 export async function updateSettings(
   sessionId: string,
-  settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean }
+  settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean; selectedTier?: string }
 ): Promise<GameState> {
   const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/settings`, {
     method: 'PATCH',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
 import { useSession } from '../lib/useSession';
@@ -40,6 +40,19 @@ export function HostPanel() {
   });
 
   const activeParticipant = state?.participants.find(p => p.id === activeParticipantId);
+
+  const availableTiers = useMemo(() => {
+    const tierSet = new Set<string>();
+    teams.forEach(team => {
+      if (team.tier?.name) tierSet.add(team.tier.name);
+    });
+    return Array.from(tierSet).sort();
+  }, [teams]);
+
+  const filteredTeams = useMemo(() => {
+    if (!state?.selectedTier) return teams;
+    return teams.filter(team => team.tier?.name === state.selectedTier);
+  }, [teams, state?.selectedTier]);
 
   const handleAddPrediction = (participantId: string) => {
     setActiveParticipantId(participantId);
@@ -207,6 +220,15 @@ export function HostPanel() {
                           />
                         </button>
                       </div>
+                      <Select
+                        label="Prediction Tier"
+                        value={state.selectedTier || ''}
+                        onChange={e => updateSettings({ selectedTier: e.target.value || undefined })}
+                        options={[
+                          { value: '', label: 'All Tiers' },
+                          ...availableTiers.map(tier => ({ value: tier, label: tier })),
+                        ]}
+                      />
                     </div>
                   </div>
 
@@ -342,7 +364,7 @@ export function HostPanel() {
       <AnimatePresence>
         {showTeamSelector && activeParticipantId && (
           <TeamSelector
-            teams={teams}
+            teams={filteredTeams}
             onSelect={handleTeamSelect}
             onClose={() => {
               setShowTeamSelector(false);

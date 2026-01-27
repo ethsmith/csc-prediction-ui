@@ -7,7 +7,7 @@ export interface SessionContextType {
   state: GameState | null;
   stateLoading: boolean;
   error: string | null;
-  updateSettings: (settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean }) => Promise<void>;
+  updateSettings: (settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean; selectedTier?: string }) => Promise<void>;
   updateParticipant: (participantId: string, data: { name?: string; score?: number; slotCount?: number; ownTeamId?: string; ownTeamName?: string }) => Promise<void>;
   addPrediction: (participantId: string, prediction: Prediction) => Promise<void>;
   removePrediction: (participantId: string, predictionId: string) => Promise<void>;
@@ -79,7 +79,7 @@ export function useSessionProvider(): SessionContextType {
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: (settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean }) => {
+    mutationFn: (settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean; selectedTier?: string }) => {
       if (!sessionId) throw new Error('No session available');
       return api.updateSettings(sessionId, settings);
     },
@@ -234,7 +234,7 @@ export function useSessionProvider(): SessionContextType {
     state,
     stateLoading,
     error,
-    updateSettings: useCallback((settings) => updateSettingsMutation.mutateAsync(settings).then(() => {}), [updateSettingsMutation]),
+    updateSettings: useCallback((settings: { currentWeek?: number; broadcastTitle?: string; guestEnabled?: boolean; selectedTier?: string }) => updateSettingsMutation.mutateAsync(settings).then(() => {}), [updateSettingsMutation]),
     updateParticipant: useCallback((participantId, data) => updateParticipantMutation.mutateAsync({ participantId, data }).then(() => {}), [updateParticipantMutation]),
     addPrediction: useCallback((participantId, prediction) => addPredictionMutation.mutateAsync({ participantId, prediction }).then(() => {}), [addPredictionMutation]),
     removePrediction: useCallback((participantId, predictionId) => removePredictionMutation.mutateAsync({ participantId, predictionId }).then(() => {}), [removePredictionMutation]),

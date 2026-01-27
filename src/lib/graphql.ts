@@ -90,7 +90,9 @@ export async function fetchTeams(): Promise<Team[]> {
         franchise: {
           name: franchise.name,
           prefix: franchise.prefix,
-          logo: `https://raw.githubusercontent.com/darkstars31/csc-stat-viewer/master/src/assets/images/franchise/${franchise.prefix}.png`,
+          logo: franchise.logo?.name
+            ? `https://core.csconfederation.com/images/${franchise.logo.name}`
+            : undefined,
         },
         tier: {
           name: team.tier?.name || 'Unknown',

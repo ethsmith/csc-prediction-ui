@@ -46,6 +46,7 @@ export interface GameState {
   revealInProgress: boolean;
   currentRevealIndex: number;
   broadcastTitle: string;
+  selectedTier?: string;
 }
 
 export const defaultHost: Participant = {
@@ -83,6 +84,7 @@ export const initialGameState: GameState = {
   revealInProgress: false,
   currentRevealIndex: -1,
   broadcastTitle: 'CSC PREDICTION CHALLENGE',
+  selectedTier: undefined,
 };
 
 export type GameAction =
@@ -103,6 +105,7 @@ export type GameAction =
   | { type: 'SET_OWN_TEAM_REVEALED'; participantId: string; revealed: boolean }
   | { type: 'CLEAR_PREDICTIONS' }
   | { type: 'SET_BROADCAST_TITLE'; title: string }
+  | { type: 'SET_SELECTED_TIER'; tier: string | undefined }
   | { type: 'LOAD_STATE'; state: GameState };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -241,6 +244,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SET_BROADCAST_TITLE':
       return { ...state, broadcastTitle: action.title };
+
+    case 'SET_SELECTED_TIER':
+      return { ...state, selectedTier: action.tier };
 
     case 'LOAD_STATE':
       return action.state;

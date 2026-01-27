@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useSession } from '../lib/useSession';
+import { fetchTeams } from '../lib/graphql';
 import type { Participant, Prediction, OwnTeamPrediction } from '../lib/store';
 import { Trophy, TrendingUp, TrendingDown, Target, Mic, User, Users, Loader2 } from 'lucide-react';
 
@@ -272,6 +275,49 @@ function BroadcastParticipantCard({
 export function BroadcastView() {
   const { state, stateLoading } = useSession();
 
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+  });
+
+  const selectedTeamIds = useMemo(() => {
+    if (!state) return new Set<string>();
+    const ids = new Set<string>();
+    for (const participant of state.participants) {
+      for (const pred of participant.predictions) {
+        ids.add(pred.teamId);
+      }
+    }
+    return ids;
+  }, [state]);
+
+  const availableFranchises = useMemo(() => {
+    if (!state?.selectedTier) return [];
+    
+    const tierTeams = teams.filter(t => t.tier?.name === state.selectedTier);
+    const franchiseMap = new Map<string, { prefix: string; logo?: string; hasAvailableTeam: boolean }>();
+    
+    for (const team of tierTeams) {
+      const prefix = team.franchise.prefix;
+      const existing = franchiseMap.get(prefix);
+      const isAvailable = !selectedTeamIds.has(team.id);
+      
+      if (!existing) {
+        franchiseMap.set(prefix, {
+          prefix,
+          logo: team.franchise.logo,
+          hasAvailableTeam: isAvailable,
+        });
+      } else if (isAvailable) {
+        existing.hasAvailableTeam = true;
+      }
+    }
+    
+    return Array.from(franchiseMap.values())
+      .filter(f => f.hasAvailableTeam)
+      .sort((a, b) => a.prefix.localeCompare(b.prefix));
+  }, [teams, state?.selectedTier, selectedTeamIds]);
+
   if (stateLoading || !state) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-csc-darker via-csc-dark to-csc-darker flex items-center justify-center">
@@ -356,11 +402,49 @@ export function BroadcastView() {
           )}
         </div>
 
+        {state.selectedTier && availableFranchises.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 flex flex-col items-center"
+          >
+            <div className="text-sm text-white/40 uppercase tracking-widest font-bold mb-3">
+              Available {state.selectedTier} Teams
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 max-w-4xl">
+              <AnimatePresence mode="popLayout">
+                {availableFranchises.map(franchise => (
+                  <motion.div
+                    key={franchise.prefix}
+                    layout
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0, transition: { duration: 0.2 } }}
+                    className="relative group"
+                  >
+                    {franchise.logo ? (
+                      <img
+                        src={franchise.logo}
+                        alt={franchise.prefix}
+                        className="w-12 h-12 rounded-lg object-contain bg-white/5 border border-white/10 p-1 transition-all group-hover:border-csc-accent/50 group-hover:bg-white/10"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/60">
+                        {franchise.prefix}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+
         <motion.footer
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="mt-8 text-center"
+          className="mt-4 text-center"
         >
           <Link to="/host" className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
             <div className="w-2 h-2 rounded-full bg-csc-green animate-pulse" />
