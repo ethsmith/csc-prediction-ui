@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PlayoffBracket, PlayoffMatchup, PlayoffPrediction, Participant } from '../lib/store';
-import { Trophy, ChevronRight } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 interface PlayoffMatchupCardProps {
   matchup: PlayoffMatchup;
@@ -11,8 +11,6 @@ interface PlayoffMatchupCardProps {
 }
 
 function PlayoffMatchupCard({ matchup, predictions, participants, showPredictions = true }: PlayoffMatchupCardProps) {
-  const team1Predictions = predictions.filter(p => p.predictedWinner === matchup.team1?.teamId);
-  const team2Predictions = predictions.filter(p => p.predictedWinner === matchup.team2?.teamId);
 
   const getParticipantName = (participantId: string) => {
     return participants.find(p => p.id === participantId)?.name || participantId;
@@ -423,7 +421,6 @@ interface PlayoffParticipantCardProps {
 
 export function PlayoffParticipantCard({ participant, predictions, bracket }: PlayoffParticipantCardProps) {
   const participantPredictions = predictions.filter(p => p.participantId === participant.id);
-  const correctPredictions = participantPredictions.filter(p => p.correct === true).length;
   const scoreBonuses = participantPredictions.filter(p => p.scoreCorrect === true).length;
   const revealedCount = participantPredictions.filter(p => p.revealed).length;
   const totalMatchups = bracket.matchups.length;
