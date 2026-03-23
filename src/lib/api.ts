@@ -1,4 +1,4 @@
-import type { GameState, Prediction, OwnTeamPrediction } from './store';
+import type { GameState, Prediction, OwnTeamPrediction, PlayoffBracket, PlayoffMatchup, PlayoffPrediction, PlayoffScore } from './store';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -202,6 +202,126 @@ export async function clearPredictions(sessionId: string): Promise<GameState> {
 export async function healthCheck(): Promise<{ status: string; timestamp: string }> {
   const response = await fetch(`${API_BASE}/api/health`);
   return handleResponse<{ status: string; timestamp: string }>(response);
+}
+
+// ==================== PLAYOFF MODE API ====================
+
+// Toggle playoff mode
+export async function togglePlayoffMode(sessionId: string, enabled: boolean): Promise<{ playoffMode: boolean }> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/playoff-mode`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  });
+  return handleResponse<{ playoffMode: boolean }>(response);
+}
+
+// Set/update playoff bracket
+export async function setPlayoffBracket(
+  sessionId: string,
+  tier: string,
+  matchups: Omit<PlayoffMatchup, 'id'>[]
+): Promise<PlayoffBracket> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/playoff-bracket`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, matchups }),
+  });
+  return handleResponse<PlayoffBracket>(response);
+}
+
+// Get playoff bracket
+export async function getPlayoffBracket(sessionId: string): Promise<PlayoffBracket | null> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/playoff-bracket`);
+  return handleResponse<PlayoffBracket | null>(response);
+}
+
+// Update a matchup (set winner/score)
+export async function updatePlayoffMatchup(
+  sessionId: string,
+  matchupId: string,
+  data: { winner?: string; score?: PlayoffScore; scheduledDate?: string }
+): Promise<PlayoffMatchup> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/playoff-bracket/matchups/${matchupId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<PlayoffMatchup>(response);
+}
+
+// Get all playoff predictions
+export async function getPlayoffPredictions(sessionId: string): Promise<PlayoffPrediction[]> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/playoff-predictions`);
+  return handleResponse<PlayoffPrediction[]>(response);
+}
+
+// Get participant's playoff predictions
+export async function getParticipantPlayoffPredictions(
+  sessionId: string,
+  participantId: string
+): Promise<PlayoffPrediction[]> {
+  const response = await fetch(
+    `${API_BASE}/api/sessions/${sessionId}/participants/${participantId}/playoff-predictions`
+  );
+  return handleResponse<PlayoffPrediction[]>(response);
+}
+
+// Set playoff prediction
+export async function setPlayoffPrediction(
+  sessionId: string,
+  participantId: string,
+  matchupId: string,
+  predictedWinner: string,
+  predictedScore: PlayoffScore
+): Promise<PlayoffPrediction> {
+  const response = await fetch(
+    `${API_BASE}/api/sessions/${sessionId}/participants/${participantId}/playoff-predictions/${matchupId}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ predictedWinner, predictedScore }),
+    }
+  );
+  return handleResponse<PlayoffPrediction>(response);
+}
+
+// Delete playoff prediction
+export async function deletePlayoffPrediction(
+  sessionId: string,
+  participantId: string,
+  matchupId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/sessions/${sessionId}/participants/${participantId}/playoff-predictions/${matchupId}`,
+    { method: 'DELETE' }
+  );
+  return handleResponse<void>(response);
+}
+
+// Reveal/hide playoff predictions for a matchup
+export async function revealPlayoffPredictions(
+  sessionId: string,
+  matchupId: string,
+  revealed: boolean
+): Promise<PlayoffPrediction[]> {
+  const response = await fetch(
+    `${API_BASE}/api/sessions/${sessionId}/playoff-predictions/matchup/${matchupId}/reveal`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revealed }),
+    }
+  );
+  return handleResponse<PlayoffPrediction[]>(response);
+}
+
+// Clear all playoff data
+export async function clearPlayoffData(sessionId: string): Promise<GameState> {
+  const response = await fetch(`${API_BASE}/api/sessions/${sessionId}/clear-playoff`, {
+    method: 'POST',
+  });
+  return handleResponse<GameState>(response);
 }
 
 // SSE subscription for real-time updates

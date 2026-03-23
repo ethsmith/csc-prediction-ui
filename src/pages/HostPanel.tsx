@@ -8,8 +8,9 @@ import type { Team } from '../lib/graphql';
 import { ParticipantCard } from '../components/ParticipantCard';
 import { TeamSelector } from '../components/TeamSelector';
 import { OwnTeamSelector } from '../components/OwnTeamSelector';
+import { PlayoffBracketSetup } from '../components/PlayoffBracketSetup';
 import { Button, Card, Input, Select } from '../components/ui';
-import { Settings, Plus, RotateCcw, Eye, Users, ChevronRight, Loader2 } from 'lucide-react';
+import { Settings, Plus, RotateCcw, Eye, Users, ChevronRight, Loader2, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function HostPanel() {
@@ -27,6 +28,13 @@ export function HostPanel() {
     toggleOwnTeamReveal,
     revealAllPredictions,
     hideAllPredictions,
+    togglePlayoffMode,
+    clearPlayoffData,
+    setPlayoffBracket,
+    updatePlayoffMatchup,
+    setPlayoffPrediction,
+    deletePlayoffPrediction,
+    revealPlayoffPredictions,
   } = useSession();
 
   const [showSettings, setShowSettings] = useState(false);
@@ -220,6 +228,24 @@ export function HostPanel() {
                           />
                         </button>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/70 flex items-center gap-2">
+                          <Trophy size={16} className="text-csc-gold" />
+                          Playoff Mode
+                        </span>
+                        <button
+                          onClick={() => togglePlayoffMode(!state.playoffMode)}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            state.playoffMode ? 'bg-csc-gold' : 'bg-white/20'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                              state.playoffMode ? 'translate-x-6' : 'translate-x-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
                       <Select
                         label="Prediction Tier"
                         value={state.selectedTier || ''}
@@ -255,6 +281,16 @@ export function HostPanel() {
                         <RotateCcw size={16} />
                         Clear All Predictions
                       </Button>
+                      {state.playoffMode && (
+                        <Button
+                          variant="danger"
+                          onClick={() => clearPlayoffData()}
+                          className="flex items-center gap-2"
+                        >
+                          <Trophy size={16} />
+                          Clear Playoff Data
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -318,47 +354,62 @@ export function HostPanel() {
           )}
         </AnimatePresence>
 
-        <div className="space-y-6">
-          {state.participants.map(participant => (
-            <div key={participant.id}>
-              <ParticipantCard
-                participant={participant}
-                isCurrentTurn={state.currentTurn === participant.id}
-                showControls={true}
-                onRemovePrediction={predId =>
-                  apiRemovePrediction(participant.id, predId)
-                }
-                onRemoveOwnTeamPrediction={() =>
-                  deleteOwnTeamPrediction(participant.id)
-                }
-                onToggleReveal={handleToggleReveal}
-              />
-              <div className="flex gap-3 mt-4 ml-6">
-                {participant.predictions.length < participant.slotCount && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleAddPrediction(participant.id)}
-                    disabled={teamsLoading}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Add Prediction ({participant.predictions.length}/{participant.slotCount})
-                  </Button>
-                )}
-                {!participant.ownTeamPrediction && participant.ownTeamId && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleAddOwnTeamPrediction(participant.id)}
-                    className="flex items-center gap-2 border-csc-gold/50"
-                  >
-                    <Plus size={16} />
-                    Add Own Team Prediction
-                  </Button>
-                )}
+        {state.playoffMode ? (
+          <PlayoffBracketSetup
+            bracket={state.playoffBracket}
+            predictions={state.playoffPredictions}
+            participants={state.participants}
+            teams={teams}
+            availableTiers={availableTiers}
+            onSetBracket={setPlayoffBracket}
+            onUpdateMatchup={updatePlayoffMatchup}
+            onSetPrediction={setPlayoffPrediction}
+            onDeletePrediction={deletePlayoffPrediction}
+            onRevealPredictions={revealPlayoffPredictions}
+          />
+        ) : (
+          <div className="space-y-6">
+            {state.participants.map(participant => (
+              <div key={participant.id}>
+                <ParticipantCard
+                  participant={participant}
+                  isCurrentTurn={state.currentTurn === participant.id}
+                  showControls={true}
+                  onRemovePrediction={predId =>
+                    apiRemovePrediction(participant.id, predId)
+                  }
+                  onRemoveOwnTeamPrediction={() =>
+                    deleteOwnTeamPrediction(participant.id)
+                  }
+                  onToggleReveal={handleToggleReveal}
+                />
+                <div className="flex gap-3 mt-4 ml-6">
+                  {participant.predictions.length < participant.slotCount && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleAddPrediction(participant.id)}
+                      disabled={teamsLoading}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus size={16} />
+                      Add Prediction ({participant.predictions.length}/{participant.slotCount})
+                    </Button>
+                  )}
+                  {!participant.ownTeamPrediction && participant.ownTeamId && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleAddOwnTeamPrediction(participant.id)}
+                      className="flex items-center gap-2 border-csc-gold/50"
+                    >
+                      <Plus size={16} />
+                      Add Own Team Prediction
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <AnimatePresence>

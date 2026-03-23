@@ -1,6 +1,42 @@
 import { createContext, useContext } from 'react';
 
 export type PredictionType = 'favorite' | 'underdog';
+export type PlayoffScore = '2-0' | '2-1';
+
+// Playoff bracket types
+export interface PlayoffTeam {
+  teamId: string;
+  teamName: string;
+  teamLogo?: string;
+  franchisePrefix: string;
+  seed: number;
+}
+
+export interface PlayoffMatchup {
+  id: string;
+  round: number;
+  position: number;
+  team1?: PlayoffTeam;
+  team2?: PlayoffTeam;
+  winner?: string;
+  score?: PlayoffScore;
+  scheduledDate?: string;
+}
+
+export interface PlayoffPrediction {
+  matchupId: string;
+  participantId: string;
+  predictedWinner: string;
+  predictedScore: PlayoffScore;
+  revealed: boolean;
+  correct?: boolean;
+  scoreCorrect?: boolean;
+}
+
+export interface PlayoffBracket {
+  tier: string;
+  matchups: PlayoffMatchup[];
+}
 
 export interface Prediction {
   id: string;
@@ -36,6 +72,7 @@ export interface Participant {
   predictions: Prediction[];
   ownTeamPrediction?: OwnTeamPrediction;
   slotCount: number;
+  playoffScore?: number;
 }
 
 export interface GameState {
@@ -47,6 +84,10 @@ export interface GameState {
   currentRevealIndex: number;
   broadcastTitle: string;
   selectedTier?: string;
+  // Playoff mode
+  playoffMode: boolean;
+  playoffBracket?: PlayoffBracket;
+  playoffPredictions: PlayoffPrediction[];
 }
 
 export const defaultHost: Participant = {
@@ -85,6 +126,8 @@ export const initialGameState: GameState = {
   currentRevealIndex: -1,
   broadcastTitle: 'CSC PREDICTION CHALLENGE',
   selectedTier: undefined,
+  playoffMode: false,
+  playoffPredictions: [],
 };
 
 export type GameAction =

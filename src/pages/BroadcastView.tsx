@@ -6,6 +6,7 @@ import { useSession } from '../lib/useSession';
 import { fetchTeams } from '../lib/graphql';
 import type { Participant, Prediction, OwnTeamPrediction } from '../lib/store';
 import { Trophy, TrendingUp, TrendingDown, Target, Mic, User, Users, Loader2 } from 'lucide-react';
+import { PlayoffBracketView, PlayoffParticipantCard } from '../components/PlayoffBracket';
 
 function BroadcastPredictionSlot({
   prediction,
@@ -454,4 +455,131 @@ export function BroadcastView() {
       </div>
     </div>
   );
+}
+
+// Playoff mode broadcast view
+function PlayoffBroadcastView() {
+  const { state, stateLoading } = useSession();
+
+  if (stateLoading || !state) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-csc-darker via-csc-dark to-csc-darker flex items-center justify-center">
+        <Loader2 className="animate-spin text-white" size={48} />
+      </div>
+    );
+  }
+
+  if (!state.playoffBracket) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-csc-darker via-csc-dark to-csc-darker flex items-center justify-center">
+        <div className="text-center">
+          <Trophy size={64} className="text-csc-gold mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Playoff Mode Active</h2>
+          <p className="text-white/60">Waiting for bracket to be set up...</p>
+          <Link to="/host" className="mt-4 inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
+            <span className="text-sm text-white/60 uppercase tracking-widest">Go to Host Panel</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-csc-darker via-csc-dark to-csc-darker overflow-hidden relative">
+      {/* Background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-csc-gold/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-csc-blue/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 p-4 h-screen flex flex-col">
+        {/* Header */}
+        <motion.header
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-center mb-3"
+        >
+          <div className="flex items-center justify-center gap-3 mb-1">
+            <Trophy size={32} className="text-csc-gold" />
+            <motion.h1
+              animate={{ 
+                textShadow: ['0 0 20px rgba(212,175,55,0.5)', '0 0 40px rgba(212,175,55,0.8)', '0 0 20px rgba(212,175,55,0.5)']
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="text-3xl font-black text-white tracking-tight"
+            >
+              {state.broadcastTitle}
+            </motion.h1>
+            <Trophy size={32} className="text-csc-gold" />
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            <div className="h-0.5 w-20 bg-gradient-to-r from-transparent to-csc-gold rounded-full" />
+            <span className="text-csc-gold font-black uppercase tracking-widest text-sm">
+              {state.playoffBracket.tier} Playoffs
+            </span>
+            <div className="h-0.5 w-20 bg-gradient-to-l from-transparent to-csc-gold rounded-full" />
+          </div>
+        </motion.header>
+
+        {/* Participant cards */}
+        <div className="grid grid-cols-3 gap-3 mb-3 max-w-4xl mx-auto w-full">
+          {state.participants.map(participant => (
+            <PlayoffParticipantCard
+              key={participant.id}
+              participant={participant}
+              predictions={state.playoffPredictions}
+              bracket={state.playoffBracket!}
+            />
+          ))}
+        </div>
+
+        {/* Bracket */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex-1 bg-csc-dark/40 backdrop-blur-sm rounded-xl border border-white/20 p-3 overflow-auto"
+        >
+          <PlayoffBracketView
+            bracket={state.playoffBracket}
+            predictions={state.playoffPredictions}
+            participants={state.participants}
+          />
+        </motion.div>
+
+        {/* Footer */}
+        <motion.footer
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="mt-2 text-center"
+        >
+          <Link to="/host" className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/20 hover:bg-white/10 transition-colors cursor-pointer">
+            <div className="w-2 h-2 rounded-full bg-csc-gold animate-pulse" />
+            <span className="text-xs text-white/70 uppercase tracking-widest font-bold">Live</span>
+          </Link>
+        </motion.footer>
+      </div>
+    </div>
+  );
+}
+
+// Main export that switches between regular and playoff mode
+export function BroadcastViewWrapper() {
+  const { state, stateLoading } = useSession();
+
+  if (stateLoading || !state) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-csc-darker via-csc-dark to-csc-darker flex items-center justify-center">
+        <Loader2 className="animate-spin text-white" size={48} />
+      </div>
+    );
+  }
+
+  if (state.playoffMode) {
+    return <PlayoffBroadcastView />;
+  }
+
+  return <BroadcastView />;
 }

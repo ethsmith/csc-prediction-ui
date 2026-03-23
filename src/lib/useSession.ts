@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { GameState, Prediction, OwnTeamPrediction } from './store';
+import type { GameState, Prediction, OwnTeamPrediction, PlayoffMatchup, PlayoffScore } from './store';
 import * as api from './api';
 
 export interface SessionContextType {
@@ -19,6 +19,14 @@ export interface SessionContextType {
   toggleOwnTeamReveal: (participantId: string, revealed: boolean) => Promise<void>;
   revealAllPredictions: () => Promise<void>;
   hideAllPredictions: () => Promise<void>;
+  // Playoff mode
+  togglePlayoffMode: (enabled: boolean) => Promise<void>;
+  setPlayoffBracket: (tier: string, matchups: Omit<PlayoffMatchup, 'id'>[]) => Promise<void>;
+  updatePlayoffMatchup: (matchupId: string, data: { winner?: string; score?: PlayoffScore; scheduledDate?: string }) => Promise<void>;
+  setPlayoffPrediction: (participantId: string, matchupId: string, predictedWinner: string, predictedScore: PlayoffScore) => Promise<void>;
+  deletePlayoffPrediction: (participantId: string, matchupId: string) => Promise<void>;
+  revealPlayoffPredictions: (matchupId: string, revealed: boolean) => Promise<void>;
+  clearPlayoffData: () => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextType | null>(null);
@@ -230,6 +238,97 @@ export function useSessionProvider(): SessionContextType {
     queryClient.invalidateQueries({ queryKey: ['session'] });
   }, [sessionId, state, queryClient]);
 
+  // Toggle playoff mode
+  const togglePlayoffModeMutation = useMutation({
+    mutationFn: (enabled: boolean) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.togglePlayoffMode(sessionId, enabled);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Set playoff bracket
+  const setPlayoffBracketMutation = useMutation({
+    mutationFn: ({ tier, matchups }: { tier: string; matchups: Omit<PlayoffMatchup, 'id'>[] }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.setPlayoffBracket(sessionId, tier, matchups);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Update playoff matchup
+  const updatePlayoffMatchupMutation = useMutation({
+    mutationFn: ({ matchupId, data }: { matchupId: string; data: { winner?: string; score?: PlayoffScore; scheduledDate?: string } }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.updatePlayoffMatchup(sessionId, matchupId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Set playoff prediction
+  const setPlayoffPredictionMutation = useMutation({
+    mutationFn: ({ participantId, matchupId, predictedWinner, predictedScore }: { participantId: string; matchupId: string; predictedWinner: string; predictedScore: PlayoffScore }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.setPlayoffPrediction(sessionId, participantId, matchupId, predictedWinner, predictedScore);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Delete playoff prediction
+  const deletePlayoffPredictionMutation = useMutation({
+    mutationFn: ({ participantId, matchupId }: { participantId: string; matchupId: string }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.deletePlayoffPrediction(sessionId, participantId, matchupId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Reveal playoff predictions for a matchup
+  const revealPlayoffPredictionsMutation = useMutation({
+    mutationFn: ({ matchupId, revealed }: { matchupId: string; revealed: boolean }) => {
+      if (!sessionId) throw new Error('No session available');
+      return api.revealPlayoffPredictions(sessionId, matchupId, revealed);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Clear playoff data
+  const clearPlayoffDataMutation = useMutation({
+    mutationFn: () => {
+      if (!sessionId) throw new Error('No session available');
+      return api.clearPlayoffData(sessionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session'] });
+      setError(null);
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
   return {
     state,
     stateLoading,
@@ -246,6 +345,14 @@ export function useSessionProvider(): SessionContextType {
     toggleOwnTeamReveal: useCallback((participantId, revealed) => toggleOwnTeamRevealMutation.mutateAsync({ participantId, revealed }).then(() => {}), [toggleOwnTeamRevealMutation]),
     revealAllPredictions,
     hideAllPredictions,
+    // Playoff mode
+    togglePlayoffMode: useCallback((enabled: boolean) => togglePlayoffModeMutation.mutateAsync(enabled).then(() => {}), [togglePlayoffModeMutation]),
+    setPlayoffBracket: useCallback((tier: string, matchups: Omit<PlayoffMatchup, 'id'>[]) => setPlayoffBracketMutation.mutateAsync({ tier, matchups }).then(() => {}), [setPlayoffBracketMutation]),
+    updatePlayoffMatchup: useCallback((matchupId: string, data: { winner?: string; score?: PlayoffScore; scheduledDate?: string }) => updatePlayoffMatchupMutation.mutateAsync({ matchupId, data }).then(() => {}), [updatePlayoffMatchupMutation]),
+    setPlayoffPrediction: useCallback((participantId: string, matchupId: string, predictedWinner: string, predictedScore: PlayoffScore) => setPlayoffPredictionMutation.mutateAsync({ participantId, matchupId, predictedWinner, predictedScore }).then(() => {}), [setPlayoffPredictionMutation]),
+    deletePlayoffPrediction: useCallback((participantId: string, matchupId: string) => deletePlayoffPredictionMutation.mutateAsync({ participantId, matchupId }).then(() => {}), [deletePlayoffPredictionMutation]),
+    revealPlayoffPredictions: useCallback((matchupId: string, revealed: boolean) => revealPlayoffPredictionsMutation.mutateAsync({ matchupId, revealed }).then(() => {}), [revealPlayoffPredictionsMutation]),
+    clearPlayoffData: useCallback(() => clearPlayoffDataMutation.mutateAsync().then(() => {}), [clearPlayoffDataMutation]),
   };
 }
 
