@@ -195,29 +195,6 @@ function DatePicker({
   );
 }
 
-// Draggable team card
-function DraggableTeam({ 
-  team, 
-  onDragStart 
-}: { 
-  team: Team; 
-  onDragStart: (team: Team) => void;
-}) {
-  return (
-    <div
-      draggable
-      onDragStart={() => onDragStart(team)}
-      className="flex items-center gap-2 bg-csc-dark border border-white/20 rounded-lg px-2 py-1.5 cursor-grab active:cursor-grabbing hover:border-csc-accent/50 transition-colors"
-    >
-      <GripVertical size={12} className="text-white/30" />
-      {team.franchise.logo && (
-        <img src={team.franchise.logo} alt="" className="w-5 h-5 rounded object-contain" />
-      )}
-      <span className="text-xs text-white font-medium">[{team.franchise.prefix}]</span>
-      <span className="text-xs text-white/70 truncate">{team.name}</span>
-    </div>
-  );
-}
 
 // Drop zone for teams
 function TeamDropZone({ 
@@ -313,7 +290,7 @@ export function PlayoffBracketSetup({
     bracket?.matchups.map(m => ({ ...m })) || []
   );
   const [isEditing, setIsEditing] = useState(!bracket);
-  const [draggedTeam, setDraggedTeam] = useState<Team | null>(null);
+  const [, setDraggedTeam] = useState<Team | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
 
   // Sync matchups from bracket when entering edit mode or when bracket changes
@@ -696,8 +673,8 @@ export function PlayoffBracketSetup({
                   <DarkSelect
                     value={matchup.winner || ''}
                     onChange={v => {
-                      // Allow clearing the winner by selecting empty value - use empty string instead of undefined so it's included in JSON
-                      onUpdateMatchup(matchup.id, { winner: v, score: v ? matchup.score : '' });
+                      // Allow clearing the winner by selecting empty value - use undefined when clearing
+                      onUpdateMatchup(matchup.id, { winner: v || undefined, score: v ? matchup.score : undefined });
                     }}
                     options={[
                       { value: '', label: matchup.winner ? '❌ Clear winner' : 'Select winner...' },
